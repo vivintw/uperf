@@ -61,6 +61,9 @@
 #define	LISTENQ		10240	/* 2nd argument to listen() */
 #define	TIMEOUT		1200000	/* Argument to poll */
 
+
+int ctr = 0;
+
 int
 name_to_addr(const char *address, struct sockaddr_storage *saddr)
 {
@@ -94,11 +97,14 @@ name_to_addr(const char *address, struct sockaddr_storage *saddr)
 int
 generic_socket(protocol_t *p, int domain, int protocol)
 {
-	if ((p->fd = socket(domain, SOCK_STREAM, protocol)) < 0) {
+	if (domain == AF_INET) {
+		if ((p->fd = socket(domain, SOCK_STREAM, protocol)) < 0) {
 		ulog_err("%s: Cannot create socket", protocol_to_str(p->type));
 		return (UPERF_FAILURE);
+	    }
+	    return (UPERF_SUCCESS);
 	}
-	return (UPERF_SUCCESS);
+	return (UPERF_FAILURE);
 }
 
 /* ARGSUSED */
@@ -258,7 +264,13 @@ generic_listen(protocol_t *p, int pflag, void* options)
 		memset(&sin, 0, sizeof(struct sockaddr_in));
 		sin.sin_family = AF_INET;
 		sin.sin_port = htons(p->port);
-		sin.sin_addr.s_addr = htonl(INADDR_ANY);
+		if(ctr){
+			sin.sin_addr.s_addr = inet_addr("44.1.1.2");
+		} else {
+			ctr++;
+			sin.sin_addr.s_addr = htonl(INADDR_ANY);
+		}
+		
 		if (bind(p->fd, (const struct sockaddr *)&sin, sizeof(struct sockaddr_in)) < 0) {
 			ulog_err("%s: Cannot bind to port %d",
 			         protocol_to_str(p->type), p->port);
